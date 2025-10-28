@@ -60,22 +60,25 @@ def load_data():
 
 data = load_data()
 
-# 2. Подготовка Препроцессора 
-numerical_features = ['Age', 'Years of Experience']
-categorical_features = ['Gender', 'Education Level', 'Job Title']
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', StandardScaler(), numerical_features),
-        ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features)
-    ],
-    remainder='drop'
-)
+# 2. Подготовка Препроцессора (Удалена из глобальной области видимости)
 
 # 3. Обучение Моделей
 @st.cache_resource
-def train_models(data, preprocessor):
-    """Обучает обе модели (Линейная Регрессия и Случайный Лес)."""
+def train_models(data):
+    """Обучает обе модели (Линейная Регрессия и Случайный Лес) и включает создание препроцессора."""
+    
+    # 2.1. Подготовка Препроцессора (Перенесено внутрь кэшируемой функции)
+    numerical_features = ['Age', 'Years of Experience']
+    categorical_features = ['Gender', 'Education Level', 'Job Title']
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), numerical_features),
+            ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features)
+        ],
+        remainder='drop'
+    )
+    # Конец перенесенного кода препроцессора
     
     X = data.drop('Salary', axis=1)
     # Применяем конвертацию, как запрошено пользователем (деление на 10 для сомони)
@@ -108,7 +111,8 @@ def train_models(data, preprocessor):
 
     return linear_pipeline, rf_pipeline, results
 
-linear_pipeline, rf_pipeline, results = train_models(data, preprocessor)
+# Обновленный вызов функции
+linear_pipeline, rf_pipeline, results = train_models(data)
 
 # --------------------------
 # 4. Секция Анализа Данных
@@ -216,7 +220,7 @@ with col2:
     )
     st.metric(
         label="Коэффициент детерминации (R²)",
-        value=f"{results.loc[1, 'R²']:.4f}"
+        value=value=f"{results.loc[1, 'R²']:.4f}"
     )
 
 st.dataframe(results, hide_index=True)
@@ -248,11 +252,16 @@ else:
 input_cols = st.columns(3)
 
 with input_cols[0]:
-    age = st.slider("Возраст (Age)", min_value=int(data['Age'].min()), max_value=int(data['Age'].max()), value=35, step=1)
+    # Убедимся, что data['Age'] не пуст перед вызовом min()/max()
+    age_min = int(data['Age'].min()) if not data.empty else 20
+    age_max = int(data['Age'].max()) if not data.empty else 60
+    age = st.slider("Возраст (Age)", min_value=age_min, max_value=age_max, value=35, step=1)
     gender = st.selectbox("Пол (Gender)", options=data['Gender'].unique())
 
 with input_cols[1]:
-    experience = st.slider("Стаж работы (Years of Experience)", min_value=0.0, max_value=float(data['Years of Experience'].max()), value=7.0, step=0.5)
+    # Убедимся, что data['Years of Experience'] не пуст перед вызовом max()
+    exp_max = float(data['Years of Experience'].max()) if not data.empty else 30.0
+    experience = st.slider("Стаж работы (Years of Experience)", min_value=0.0, max_value=exp_max, value=7.0, step=0.5)
     education = st.selectbox("Уровень Образования (Education Level)", options=data['Education Level'].unique())
 
 with input_cols[2]:
