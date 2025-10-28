@@ -220,7 +220,7 @@ with col2:
     )
     st.metric(
         label="Коэффициент детерминации (R²)",
-        value=value=f"{results.loc[1, 'R²']:.4f}"
+        value=f"{results.loc[1, 'R²']:.4f}"
     )
 
 st.dataframe(results, hide_index=True)
